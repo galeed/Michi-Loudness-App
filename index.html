@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loudness Analyzer</title>
+  <title>Loudness Penalty Analyzer</title>
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #1f1c2c, #928dab);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --accent-color: #ff4081;
-      --text-main: #333333;
-      --text-muted: #666666;
+      --bg-gradient: linear-gradient(135deg, #181925 0%, #292842 50%, #1f1c2c 100%);
+      --card-bg: #ffffff;
+      --accent-pink: #ff3366;
+      --accent-purple: #7928ca;
+      --accent-blue: #2575fc;
+      --text-main: #2d3748;
+      --text-muted: #718096;
+      --border-color: #e2e8f0;
     }
 
     * {
@@ -33,155 +36,254 @@
     .container {
       background: var(--card-bg);
       width: 100%;
-      max-width: 420px;
-      padding: 30px 24px;
-      border-radius: 20px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(10px);
+      max-width: 440px;
+      padding: 28px 24px;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
       text-align: center;
     }
 
-    h1 {
-      font-size: 1.4rem;
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--accent-color);
+      letter-spacing: 0.8px;
+      color: var(--accent-pink);
       margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     .drop-zone {
-      border: 2px dashed var(--accent-color);
-      border-radius: 12px;
-      padding: 25px 15px;
+      border: 2px dashed #ff80ab;
+      border-radius: 16px;
+      padding: 24px 16px;
       cursor: pointer;
-      background: rgba(255, 64, 129, 0.05);
-      transition: background 0.3s ease;
-      margin-bottom: 20px;
+      background: rgba(255, 51, 102, 0.03);
+      transition: all 0.25s ease;
+      margin-bottom: 18px;
+      position: relative;
     }
 
-    .drop-zone:hover {
-      background: rgba(255, 64, 129, 0.12);
+    .drop-zone.dragover {
+      background: rgba(255, 51, 102, 0.12);
+      border-color: var(--accent-pink);
+      transform: scale(1.01);
     }
 
     .drop-zone p {
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       color: var(--text-muted);
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+      font-weight: 500;
     }
 
-    .drop-zone span {
+    .btn-select {
       display: inline-block;
-      background: var(--accent-color);
-      color: #fff;
-      padding: 6px 16px;
+      background: linear-gradient(135deg, #ff3366, #ff6b8b);
+      color: #ffffff;
+      padding: 8px 20px;
       border-radius: 20px;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 12px rgba(255, 51, 102, 0.3);
+      pointer-events: none;
+    }
+
+    .formats-hint {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-top: 10px;
     }
 
     #fileInput {
       display: none;
     }
 
-    .status {
-      font-size: 0.9rem;
+    .status-box {
+      font-size: 0.88rem;
+      font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 15px;
-      min-height: 20px;
+      margin-bottom: 18px;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 51, 102, 0.2);
+      border-top: 2px solid var(--accent-pink);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .results-card {
-      background: linear-gradient(180deg, #3f51b5, #e91e63);
-      padding: 20px;
-      border-radius: 16px;
+      background: linear-gradient(160deg, #7b2cbf 0%, #3a0ca3 50%, #4cc9f0 100%);
+      padding: 22px 18px;
+      border-radius: 18px;
       color: #ffffff;
-      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
 
     .results-card h2 {
       font-size: 1.1rem;
-      letter-spacing: 0.5px;
-      margin-bottom: 15px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
       text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
     .results-list {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 15px 20px;
+      border-radius: 14px;
+      padding: 16px 20px;
       color: var(--text-main);
       display: flex;
       flex-direction: column;
       gap: 12px;
       text-align: left;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .platform-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 1rem;
-      font-weight: 500;
+      font-size: 0.98rem;
+      padding-bottom: 4px;
+      border-bottom: 1px dashed #edf2f7;
+    }
+
+    .platform-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
     }
 
     .platform-name {
-      color: #444;
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    .platform-target {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-left: 4px;
+      font-weight: 400;
     }
 
     .penalty-val {
-      font-weight: 700;
-      color: var(--accent-color);
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: #e53e3e;
+      transition: color 0.3s ease;
+    }
+
+    .penalty-val.positive {
+      color: #38a169;
+    }
+
+    .penalty-val.neutral {
+      color: #718096;
+    }
+
+    .audio-player-container {
+      margin-top: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 8px;
+      display: none;
     }
 
     audio {
       width: 100%;
-      margin-top: 15px;
-      border-radius: 30px;
+      height: 36px;
+      outline: none;
+    }
+
+    .lufs-badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>Loudness Penalty Analyzer</h1>
-
-    <div class="drop-zone" id="dropZone">
-      <p>Arrastra tu archivo de audio (WAV / MP3)</p>
-      <span>Seleccionar Archivo</span>
-      <input type="file" id="fileInput" accept="audio/*">
+    <div class="header-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+      Loudness Penalty: Analyzer
     </div>
 
-    <div class="status" id="statusText">Listo para analizar</div>
+    <div class="drop-zone" id="dropZone">
+      <p>Arrastra tu master de audio aquí</p>
+      <span class="btn-select">Seleccionar Archivo</span>
+      <div class="formats-hint">Soporta WAV, MP3, FLAC, M4A, AAC, OGG, AIFF</div>
+      <input type="file" id="fileInput" accept="audio/*, .wav, .mp3, .flac, .m4a, .aac, .ogg, .aiff, .aif">
+    </div>
+
+    <div class="status-box">
+      <div class="spinner" id="spinner"></div>
+      <span id="statusText">Listo para analizar</span>
+    </div>
 
     <div class="results-card">
-      <h2>Results (in dB)</h2>
-      <div class="results-list" id="resultsList">
+      <h2>RESULTS (in dB)</h2>
+      <div class="results-list">
         <div class="platform-row">
-          <span class="platform-name">YouTube (-14 LUFS)</span>
-          <span class="penalty-val" id="youtube-val">0.0</span>
+          <span class="platform-name">YouTube <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="youtube-val">-0.0</span>
         </div>
         <div class="platform-row">
-          <span class="platform-name">Spotify (-14 LUFS)</span>
-          <span class="penalty-val" id="spotify-val">0.0</span>
+          <span class="platform-name">Spotify <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="spotify-val">-0.0</span>
         </div>
         <div class="platform-row">
-          <span class="platform-name">TIDAL (-14 LUFS)</span>
-          <span class="penalty-val" id="tidal-val">0.0</span>
+          <span class="platform-name">TIDAL <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="tidal-val">-0.0</span>
         </div>
         <div class="platform-row">
-          <span class="platform-name">Apple (-16 LUFS)</span>
-          <span class="penalty-val" id="apple-val">0.0</span>
+          <span class="platform-name">Apple Music <span class="platform-target">(-16 LUFS)</span></span>
+          <span class="penalty-val neutral" id="apple-val">-0.0</span>
         </div>
         <div class="platform-row">
-          <span class="platform-name">Amazon (-14 LUFS)</span>
-          <span class="penalty-val" id="amazon-val">0.0</span>
+          <span class="platform-name">Amazon Music <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="amazon-val">-0.0</span>
         </div>
         <div class="platform-row">
-          <span class="platform-name">Deezer (-14 LUFS)</span>
-          <span class="penalty-val" id="deezer-val">0.0</span>
+          <span class="platform-name">Pandora <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="pandora-val">-0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">Deezer <span class="platform-target">(-14 LUFS)</span></span>
+          <span class="penalty-val neutral" id="deezer-val">-0.0</span>
         </div>
       </div>
-      <audio id="audioPlayer" controls></audio>
+
+      <div class="lufs-badge" id="lufsBadge">Nivel Detectado: -- LUFS</div>
+
+      <div class="audio-player-container" id="playerContainer">
+        <audio id="audioPlayer" controls></audio>
+      </div>
     </div>
   </div>
 
@@ -189,7 +291,10 @@
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const statusText = document.getElementById('statusText');
+    const spinner = document.getElementById('spinner');
     const audioPlayer = document.getElementById('audioPlayer');
+    const playerContainer = document.getElementById('playerContainer');
+    const lufsBadge = document.getElementById('lufsBadge');
 
     const targets = {
       youtube: -14,
@@ -197,84 +302,166 @@
       tidal: -14,
       apple: -16,
       amazon: -14,
+      pandora: -14,
       deezer: -14
     };
 
-    dropZone.addEventListener('click', () => fileInput.click());
-
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.style.background = 'rgba(255, 64, 129, 0.2)';
+    // Trigger file dialog accurately
+    dropZone.addEventListener('click', (e) => {
+      fileInput.click();
     });
 
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.style.background = 'rgba(255, 64, 129, 0.05)';
+    // Drag and Drop handlers
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      }, false);
     });
 
     dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.style.background = 'rgba(255, 64, 129, 0.05)';
-      if (e.dataTransfer.files.length) {
-        handleFile(e.dataTransfer.files[0]);
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        handleFile(dt.files[0]);
       }
     });
 
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length) {
+      if (e.target.files && e.target.files.length > 0) {
         handleFile(e.target.files[0]);
       }
     });
 
-    function handleFile(file) {
-      if (!file.type.startsWith('audio/')) {
-        statusText.innerText = 'Por favor selecciona un archivo de audio válido.';
-        return;
-      }
-
-      statusText.innerText = `Cargando: ${file.name}...`;
-      const url = URL.createObjectURL(file);
-      audioPlayer.src = url;
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        statusText.innerText = 'Analizando loudness (RMS / LUFS aprox)...';
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const audioBuffer = await audioCtx.decodeAudioData(e.target.result);
-          const lufs = calculateIntegratedLoudness(audioBuffer);
-          
-          statusText.innerText = `Análisis completado (Nivel detectado: ${lufs.toFixed(1)} LUFS)`;
-          updatePenalties(lufs);
-        } catch (err) {
-          statusText.innerText = 'Error al procesar el archivo de audio.';
-          console.error(err);
-        }
-      };
-      reader.readAsArrayBuffer(file);
+    function setStatus(msg, isLoading = false) {
+      statusText.innerText = msg;
+      spinner.style.display = isLoading ? 'block' : 'none';
     }
 
-    // Cálculo aproximado de sonoridad integrada (K-Weighting / RMS simplificado)
-    function calculateIntegratedLoudness(buffer) {
-      const numberOfChannels = buffer.numberOfChannels;
-      const length = buffer.length;
-      let totalSquareSum = 0;
+    async function handleFile(file) {
+      if (!file) return;
 
-      for (let c = 0; c < numberOfChannels; c++) {
-        const channelData = buffer.getChannelData(c);
-        let channelSum = 0;
-        // Muestreo por bloques para optimizar velocidad
-        const step = 4;
-        for (let i = 0; i < length; i += step) {
-          channelSum += channelData[i] * channelData[i];
+      // Reset audio player
+      playerContainer.style.display = 'none';
+      setStatus(`Cargando: ${file.name}...`, true);
+
+      try {
+        const objectUrl = URL.createObjectURL(file);
+        audioPlayer.src = objectUrl;
+        playerContainer.style.display = 'block';
+
+        const arrayBuffer = await file.arrayBuffer();
+        setStatus('Decodificando audio...', true);
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContextClass();
+
+        // Decode audio data with fallback promise support
+        const audioBuffer = await new Promise((resolve, reject) => {
+          audioCtx.decodeAudioData(arrayBuffer, resolve, (err) => {
+            reject(new Error('No se pudo decodificar el formato de audio seleccionado.'));
+          });
+        });
+
+        setStatus('Analizando nivel de Loudness (LUFS)...', true);
+
+        // Small delay to let UI update
+        setTimeout(() => {
+          const lufs = calculateBS1770Loudness(audioBuffer);
+          setStatus(`Análisis finalizado para: ${file.name}`);
+          lufsBadge.innerText = `Nivel Detectado: ${lufs.toFixed(1)} LUFS`;
+          updatePenalties(lufs);
+          audioCtx.close();
+        }, 50);
+
+      } catch (err) {
+        console.error(err);
+        setStatus(`Error: ${err.message || 'Formato de audio no compatible.'}`, false);
+      }
+    }
+
+    // ITU-R BS.1770 / EBU R128 K-Weighting Loudness Calculation
+    function calculateBS1770Loudness(buffer) {
+      const sampleRate = buffer.sampleRate;
+      const numChannels = buffer.numberOfChannels;
+      const numSamples = buffer.length;
+
+      // Filter coefficients for K-Weighting High Shelf Filter (Pre-filter)
+      // Standard coefficients scaled for current sample rate
+      const dbGain = 4.0;
+      const f0 = 1500;
+      const Q = 1/Math.SQRT2;
+      const w0 = 2 * Math.PI * f0 / sampleRate;
+      const alpha = Math.sin(w0) / (2 * Q);
+      const A = Math.pow(10, dbGain / 40);
+
+      const b0 = A * ((A + 1) + (A - 1) * Math.cos(w0) + 2 * Math.sqrt(A) * alpha);
+      const b1 = -2 * A * ((A - 1) + (A + 1) * Math.cos(w0));
+      const b2 = A * ((A + 1) + (A - 1) * Math.cos(w0) - 2 * Math.sqrt(A) * alpha);
+      const a0 = (A + 1) - (A - 1) * Math.cos(w0) + 2 * Math.sqrt(A) * alpha;
+      const a1 = 2 * ((A - 1) - (A + 1) * Math.cos(w0));
+      const a2 = (A + 1) - (A - 1) * Math.cos(w0) - 2 * Math.sqrt(A) * alpha;
+
+      // High-pass filter coefficients (RLB Filter)
+      const f0_hp = 38;
+      const Q_hp = 0.5;
+      const w0_hp = 2 * Math.PI * f0_hp / sampleRate;
+      const alpha_hp = Math.sin(w0_hp) / (2 * Q_hp);
+
+      const hb0 = (1 + Math.cos(w0_hp)) / 2;
+      const hb1 = -(1 + Math.cos(w0_hp));
+      const hb2 = (1 + Math.cos(w0_hp)) / 2;
+      const ha0 = 1 + alpha_hp;
+      const ha1 = -2 * Math.cos(w0_hp);
+      const ha2 = 1 - alpha_hp;
+
+      let channelPowers = [];
+
+      for (let c = 0; c < numChannels; c++) {
+        const pData = buffer.getChannelData(c);
+        
+        // Apply Biquad High-Shelf
+        let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+        let hsData = new Float32Array(numSamples);
+        for (let i = 0; i < numSamples; i++) {
+          let x0 = pData[i];
+          let y0 = (b0/a0)*x0 + (b1/a0)*x1 + (b2/a0)*x2 - (a1/a0)*y1 - (a2/a0)*y2;
+          x2 = x1; x1 = x0;
+          y2 = y1; y1 = y0;
+          hsData[i] = y0;
         }
-        totalSquareSum += channelSum / (length / step);
+
+        // Apply Biquad High-Pass
+        x1 = 0; x2 = 0; y1 = 0; y2 = 0;
+        let sumSquare = 0;
+        for (let i = 0; i < numSamples; i++) {
+          let x0 = hsData[i];
+          let y0 = (hb0/ha0)*x0 + (hb1/ha0)*x1 + (hb2/ha0)*x2 - (ha1/ha0)*y1 - (ha2/ha0)*y2;
+          x1 = x0; x2 = x1;
+          y1 = y0; y2 = y1;
+          sumSquare += y0 * y0;
+        }
+
+        channelPowers.push(sumSquare / numSamples);
       }
 
-      const meanSquare = totalSquareSum / numberOfChannels;
-      const rms = Math.sqrt(meanSquare);
-      
-      // Offset de calibración RMS a LUFS (~ -3 dB)
-      let lufs = 20 * Math.log10(rms + 1e-9) - 3.0; 
+      // Sum across channels (weighted: L, R have weight 1.0)
+      let totalPower = 0;
+      for (let c = 0; c < Math.min(numChannels, 2); c++) {
+        totalPower += channelPowers[c];
+      }
+
+      if (totalPower <= 1e-12) return -70; // Silence threshold
+
+      let lufs = -0.691 + 10 * Math.log10(totalPower);
       return lufs;
     }
 
@@ -283,9 +470,18 @@
         const diff = target - lufs;
         const el = document.getElementById(`${platform}-val`);
         if (el) {
-          // Si el audio es más fuerte que el target, la plataforma atenúa (penalty negativo)
-          const value = diff < 0 ? diff.toFixed(1) : `+${diff.toFixed(1)}`;
-          el.innerText = value;
+          if (diff < 0) {
+            // Loudness penalty applied (attenuation)
+            el.innerText = diff.toFixed(1);
+            el.className = 'penalty-val';
+          } else if (diff > 0) {
+            // Under target (gain dynamic head)
+            el.innerText = `+${diff.toFixed(1)}`;
+            el.className = 'penalty-val positive';
+          } else {
+            el.innerText = '0.0';
+            el.className = 'penalty-val neutral';
+          }
         }
       }
     }
