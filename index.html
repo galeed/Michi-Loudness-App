@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loudness Analyzer</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #1f1c2c, #928dab);
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --accent-color: #ff4081;
+      --text-main: #333333;
+      --text-muted: #666666;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: var(--text-main);
+    }
+
+    .container {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 420px;
+      padding: 30px 24px;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-color);
+      margin-bottom: 20px;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--accent-color);
+      border-radius: 12px;
+      padding: 25px 15px;
+      cursor: pointer;
+      background: rgba(255, 64, 129, 0.05);
+      transition: background 0.3s ease;
+      margin-bottom: 20px;
+    }
+
+    .drop-zone:hover {
+      background: rgba(255, 64, 129, 0.12);
+    }
+
+    .drop-zone p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .drop-zone span {
+      display: inline-block;
+      background: var(--accent-color);
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 15px;
+      min-height: 20px;
+    }
+
+    .results-card {
+      background: linear-gradient(180deg, #3f51b5, #e91e63);
+      padding: 20px;
+      border-radius: 16px;
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+
+    .results-card h2 {
+      font-size: 1.1rem;
+      letter-spacing: 0.5px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .results-list {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 15px 20px;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .platform-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .platform-name {
+      color: #444;
+    }
+
+    .penalty-val {
+      font-weight: 700;
+      color: var(--accent-color);
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 15px;
+      border-radius: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Loudness Penalty Analyzer</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <p>Arrastra tu archivo de audio (WAV / MP3)</p>
+      <span>Seleccionar Archivo</span>
+      <input type="file" id="fileInput" accept="audio/*">
+    </div>
+
+    <div class="status" id="statusText">Listo para analizar</div>
+
+    <div class="results-card">
+      <h2>Results (in dB)</h2>
+      <div class="results-list" id="resultsList">
+        <div class="platform-row">
+          <span class="platform-name">YouTube (-14 LUFS)</span>
+          <span class="penalty-val" id="youtube-val">0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">Spotify (-14 LUFS)</span>
+          <span class="penalty-val" id="spotify-val">0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">TIDAL (-14 LUFS)</span>
+          <span class="penalty-val" id="tidal-val">0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">Apple (-16 LUFS)</span>
+          <span class="penalty-val" id="apple-val">0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">Amazon (-14 LUFS)</span>
+          <span class="penalty-val" id="amazon-val">0.0</span>
+        </div>
+        <div class="platform-row">
+          <span class="platform-name">Deezer (-14 LUFS)</span>
+          <span class="penalty-val" id="deezer-val">0.0</span>
+        </div>
+      </div>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const statusText = document.getElementById('statusText');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    const targets = {
+      youtube: -14,
+      spotify: -14,
+      tidal: -14,
+      apple: -16,
+      amazon: -14,
+      deezer: -14
+    };
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'rgba(255, 64, 129, 0.2)';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.background = 'rgba(255, 64, 129, 0.05)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'rgba(255, 64, 129, 0.05)';
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('audio/')) {
+        statusText.innerText = 'Por favor selecciona un archivo de audio válido.';
+        return;
+      }
+
+      statusText.innerText = `Cargando: ${file.name}...`;
+      const url = URL.createObjectURL(file);
+      audioPlayer.src = url;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        statusText.innerText = 'Analizando loudness (RMS / LUFS aprox)...';
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const audioBuffer = await audioCtx.decodeAudioData(e.target.result);
+          const lufs = calculateIntegratedLoudness(audioBuffer);
+          
+          statusText.innerText = `Análisis completado (Nivel detectado: ${lufs.toFixed(1)} LUFS)`;
+          updatePenalties(lufs);
+        } catch (err) {
+          statusText.innerText = 'Error al procesar el archivo de audio.';
+          console.error(err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Cálculo aproximado de sonoridad integrada (K-Weighting / RMS simplificado)
+    function calculateIntegratedLoudness(buffer) {
+      const numberOfChannels = buffer.numberOfChannels;
+      const length = buffer.length;
+      let totalSquareSum = 0;
+
+      for (let c = 0; c < numberOfChannels; c++) {
+        const channelData = buffer.getChannelData(c);
+        let channelSum = 0;
+        // Muestreo por bloques para optimizar velocidad
+        const step = 4;
+        for (let i = 0; i < length; i += step) {
+          channelSum += channelData[i] * channelData[i];
+        }
+        totalSquareSum += channelSum / (length / step);
+      }
+
+      const meanSquare = totalSquareSum / numberOfChannels;
+      const rms = Math.sqrt(meanSquare);
+      
+      // Offset de calibración RMS a LUFS (~ -3 dB)
+      let lufs = 20 * Math.log10(rms + 1e-9) - 3.0; 
+      return lufs;
+    }
+
+    function updatePenalties(lufs) {
+      for (const [platform, target] of Object.entries(targets)) {
+        const diff = target - lufs;
+        const el = document.getElementById(`${platform}-val`);
+        if (el) {
+          // Si el audio es más fuerte que el target, la plataforma atenúa (penalty negativo)
+          const value = diff < 0 ? diff.toFixed(1) : `+${diff.toFixed(1)}`;
+          el.innerText = value;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
