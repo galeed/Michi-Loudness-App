@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loudness Penalty Analyzer</title>
+  <title>Michi Loudness App</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
@@ -43,7 +43,7 @@
     }
 
     .header-title {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -241,8 +241,7 @@
 
   <div class="container">
     <div class="header-title">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
-      Loudness Penalty: Analyzer
+      🐱 Michi Loudness App
     </div>
 
     <div class="drop-zone" id="dropZone">
@@ -511,7 +510,7 @@
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('LOUDNESS ANALYZER REPORT', 15, 25);
+      doc.text('MICHI LOUDNESS APP REPORT', 15, 25);
 
       // Metadata Section
       doc.setTextColor(50, 50, 50);
@@ -549,7 +548,6 @@
         doc.text(platform, 20, y);
         doc.text(info.target, 100, y);
         
-        // Highlight negative penalties
         if (info.penalty.startsWith('-')) {
           doc.setTextColor(229, 62, 62);
         } else if (info.penalty.startsWith('+')) {
@@ -569,11 +567,11 @@
       // Footer
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text('Reporte generado automáticamente por Loudness Penalty Analyzer (ITU-R BS.1770 / EBU R128).', 15, 280);
+      doc.text('Reporte generado automáticamente por Michi Loudness App (ITU-R BS.1770 / EBU R128).', 15, 280);
 
       // Save PDF
       const cleanName = currentAnalysis.fileName.replace(/\.[^/.]+$/, "");
-      doc.save(`Loudness_Report_${cleanName}.pdf`);
+      doc.save(`Michi_Loudness_Report_${cleanName}.pdf`);
     });
   </script>
 </body>
