@@ -331,21 +331,42 @@
       color: #4a5568;
     }
 
-    .btn-download-wav {
-      width: 100%;
-      padding: 10px;
-      background: #2575fc;
-      color: #ffffff;
+    .norm-action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-download-wav, .btn-download-norm-pdf {
+      flex: 1;
+      padding: 10px 8px;
       border: none;
       border-radius: 10px;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 10px;
-      box-shadow: 0 4px 10px rgba(37, 117, 252, 0.3);
-      display: inline-block;
       text-decoration: none;
       text-align: center;
+      transition: transform 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn-download-wav {
+      background: var(--accent-blue);
+      color: #ffffff;
+    }
+
+    .btn-download-norm-pdf {
+      background: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .btn-download-wav:hover, .btn-download-norm-pdf:hover {
+      transform: translateY(-1px);
     }
   </style>
 </head>
@@ -433,7 +454,10 @@
           <div class="audio-player-container" style="display:block; margin-top:8px;">
             <audio id="normAudioPlayer" controls></audio>
           </div>
-          <a class="btn-download-wav" id="btnDownloadWav" download="master_normalized_48k_24bit.wav">⬇ Descargar WAV (48kHz / 24-bit)</a>
+          <div class="norm-action-buttons">
+            <a class="btn-download-wav" id="btnDownloadWav" download="master_normalized_48k_24bit.wav">⬇ WAV (48k/24b)</a>
+            <button class="btn-download-norm-pdf" id="btnDownloadNormPdf">📄 PDF Normalizado</button>
+          </div>
         </div>
       </div>
     </div>
@@ -455,8 +479,10 @@
     const normDetails = document.getElementById('normDetails');
     const normAudioPlayer = document.getElementById('normAudioPlayer');
     const btnDownloadWav = document.getElementById('btnDownloadWav');
+    const btnDownloadNormPdf = document.getElementById('btnDownloadNormPdf');
 
     let currentAnalysis = null;
+    let currentNormAnalysis = null;
     let decodedBuffer = null;
 
     const targets = {
@@ -663,7 +689,6 @@
 
       setStatus('Normalizando y remuestreando a 48 kHz...', true);
 
-      // Renderizado Offline en 48 kHz
       const targetSampleRate = 48000;
       const targetLength = Math.ceil(decodedBuffer.duration * targetSampleRate);
       const numChannels = decodedBuffer.numberOfChannels;
@@ -698,6 +723,15 @@
         }
       }
       const peakDb = 20 * Math.log10(maxPeak + 1e-9);
+
+      // Guardar datos de análisis normalizado
+      currentNormAnalysis = {
+        targetLufs: selectedTarget,
+        appliedGain: diffDb,
+        peakDb: peakDb,
+        sampleRate: '48,000 Hz',
+        bitDepth: '24 bits PCM'
+      };
 
       // Desplegar detalles del audio normalizado
       normDetails.innerHTML = `
@@ -752,7 +786,7 @@
       writeString(view, 36, 'data');
       view.setUint32(40, dataSize, true);
 
-      /* Datos de audio PCM 24 bits intercalados */
+      /* Datos de audio PCM 24 bits */
       let offset = 44;
       const channels = [];
       for (let i = 0; i < numChannels; i++) {
@@ -776,7 +810,7 @@
       return new Blob([arrayBuffer], { type: 'audio/wav' });
     }
 
-    // Generador de PDF
+    // Generador de PDF Original
     btnPdf.addEventListener('click', () => {
       if (!currentAnalysis) return;
 
@@ -846,6 +880,111 @@
 
       const cleanName = currentAnalysis.fileName.replace(/\.[^/.]+$/, "");
       doc.save(`Michi_Loudness_Report_${cleanName}.pdf`);
+    });
+
+    // Generador de PDF de Normalización (Original vs Normalizado)
+    btnDownloadNormPdf.addEventListener('click', () => {
+      if (!currentAnalysis || !currentNormAnalysis) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      // Header Banner
+      doc.setFillColor(121, 40, 202); // #7928ca
+      doc.rect(0, 0, 210, 40, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MICHI LOUDNESS APP - NORMALIZATION REPORT', 15, 25);
+
+      // Sección 1: Audio Original
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('1. AUDIO ORIGINAL SUBIDO', 15, 52);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nombre del Archivo: ${currentAnalysis.fileName}`, 15, 60);
+      doc.text(`Loudness Detectado: ${currentAnalysis.lufs.toFixed(1)} LUFS`, 15, 67);
+      doc.text(`Frecuencia de Muestreo Original: ${currentAnalysis.sampleRate}`, 15, 74);
+      doc.text(`Duración: ${currentAnalysis.duration}`, 15, 81);
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(15, 87, 195, 87);
+
+      // Sección 2: Audio Normalizado
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('2. RESULTADO DE NORMALIZACIÓN Y MASTERING', 15, 97);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Target Objetivo: ${currentNormAnalysis.targetLufs} LUFS`, 15, 105);
+      doc.text(`Ganancia Aplicada: ${currentNormAnalysis.appliedGain > 0 ? '+' : ''}${currentNormAnalysis.appliedGain.toFixed(1)} dB`, 15, 112);
+      doc.text(`Peak Relativo Resultante: ${currentNormAnalysis.peakDb.toFixed(1)} dBFS`, 15, 119);
+      doc.text(`Formato de Salida Exportado: WAV PCM (48,000 Hz / 24 bits)`, 15, 126);
+      doc.text(`Fecha de Procesamiento: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 15, 133);
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(15, 139, 195, 139);
+
+      // Sección 3: Comparativa de Penalización por Plataforma
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('3. COMPARATIVA DE IMPACTO POR PLATAFORMA', 15, 149);
+
+      doc.setFillColor(240, 242, 245);
+      doc.rect(15, 154, 180, 8, 'F');
+      
+      doc.setFontSize(8);
+      doc.text('PLATAFORMA', 18, 159);
+      doc.text('TARGET', 75, 159);
+      doc.text('PENALIZACIÓN ORIGINAL', 108, 159);
+      doc.text('ESTADO POST-NORM.', 155, 159);
+
+      let y = 169;
+      doc.setFont('helvetica', 'normal');
+
+      const normLufs = currentNormAnalysis.targetLufs;
+
+      for (const [platform, targetLufs] of Object.entries(targets)) {
+        const origDiff = currentAnalysis.results[platform].penalty;
+        const normDiff = targetLufs - normLufs;
+        let normStr = "0.0 dB";
+
+        if (normDiff < 0) normStr = `${normDiff.toFixed(1)} dB`;
+        else if (normDiff > 0) normStr = `+${normDiff.toFixed(1)} dB`;
+
+        doc.text(platform, 18, y);
+        doc.text(`${targetLufs} LUFS`, 75, y);
+        doc.text(origDiff, 108, y);
+
+        if (normDiff === 0) {
+          doc.setTextColor(56, 161, 105);
+          doc.text(`OPTIMIZADO (${normStr})`, 155, y);
+        } else if (normDiff < 0) {
+          doc.setTextColor(229, 62, 62);
+          doc.text(`Ajuste: ${normStr}`, 155, y);
+        } else {
+          doc.setTextColor(100, 100, 100);
+          doc.text(normStr, 155, y);
+        }
+
+        doc.setTextColor(50, 50, 50);
+        doc.setDrawColor(240, 240, 240);
+        doc.line(15, y + 3, 195, y + 3);
+        y += 10;
+      }
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Informe completo emitido por Michi Loudness App (Procesamiento PCM 48kHz/24bit).', 15, 280);
+
+      const cleanName = currentAnalysis.fileName.replace(/\.[^/.]+$/, "");
+      doc.save(`Michi_Normalized_Report_${cleanName}.pdf`);
     });
   </script>
 </body>
